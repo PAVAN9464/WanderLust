@@ -1,6 +1,7 @@
 const express=require("express");
 const app=express();
 const mongoose=require("mongoose");
+const methodOverride=require("method-override");
 const Listing=require("./models/Listing")
 const path=require("path");
 
@@ -16,6 +17,7 @@ async function main() {
 app.set("view engine","ejs");
 app.set("views",path.join(__dirname,"views"));
 app.use(express.urlencoded({extended:true}));
+app.use(methodOverride("_method"));
 app.get("/",(req,res)=>{
     res.send("At root directory");
 });
@@ -43,6 +45,27 @@ app.post("/listings",async (req,res)=>{
     
 
 })
+
+//Edit Route
+app.get("/listings/:id/edit",async (req,res)=>{
+    const {id}=req.params;
+    const listing=await Listing.findById(id);
+    res.render("listings/edit.ejs",{listing});
+});
+
+//Update Route
+app.patch("/listings/:id",async (req,res)=>{
+    const {id}=req.params;
+    await Listing.findByIdAndUpdate(id,req.body.listing);
+    res.redirect(`/listings/${id}`);
+});
+
+//Destroy Route
+app.delete("/listings/:id",async (req,res)=>{
+    const {id}=req.params;
+    await Listing.findByIdAndDelete(id);
+    res.redirect("/listings");
+});
 
 //Show Route
 app.get("/listings/:id",async (req,res)=>{
