@@ -7,6 +7,8 @@ Wanderlust is a server-rendered travel-listing application built with Node.js, E
 - Display all travel listings.
 - View the details of an individual listing.
 - Add a new listing through an HTML form.
+- Edit an existing listing from its details page.
+- Delete an existing listing from its details page.
 - Store listing data in MongoDB using Mongoose.
 - Seed the database with sample travel listings.
 - Render pages on the server with EJS templates.
@@ -18,6 +20,7 @@ Wanderlust is a server-rendered travel-listing application built with Node.js, E
 - **MongoDB**: Database for storing listings.
 - **Mongoose**: MongoDB object modeling library.
 - **EJS**: Server-side HTML templating engine.
+- **method-override**: Enables PATCH and DELETE requests from HTML forms.
 - **Nodemon**: Development utility for automatically restarting the server.
 
 ## Project Structure
@@ -34,6 +37,7 @@ Major_Project/
 ├── views/
 │   └── listings/
 │       ├── index.ejs       # All listings page
+│       ├── edit.ejs        # Edit listing form
 │       ├── new.ejs         # New listing form
 │       └── show.ejs        # Individual listing page
 └── README.md
@@ -103,7 +107,12 @@ Because the script calls `deleteMany({})`, it deletes all existing documents in 
 | `GET` | `/listings` | Fetches and displays all listings. |
 | `GET` | `/listings/new` | Displays the form for creating a listing. |
 | `POST` | `/listings` | Creates a listing from submitted form data, saves it, and redirects to `/listings`. |
+| `GET` | `/listings/:id/edit` | Displays a prefilled edit form for one listing. |
+| `PATCH` | `/listings/:id` | Updates one listing and redirects to its details page. |
+| `DELETE` | `/listings/:id` | Deletes one listing and redirects to `/listings`. |
 | `GET` | `/listings/:id` | Fetches and displays one listing by its MongoDB ID. |
+
+Edit and Delete controls are available on each listing's details page. Because standard HTML forms support GET and POST, the forms submit a `_method` field and `method-override` converts those submissions into PATCH or DELETE requests.
 
 ## Listing Data Model
 
@@ -143,7 +152,9 @@ res.redirect("/listings");
 4. Visit `/listings` to browse the records.
 5. Select **Add new Listing**.
 6. Submit the form.
-7. Confirm that the new listing appears on the listings page.
+7. Select a listing to open its details page.
+8. Use **Edit** to update the listing or **Delete** to remove it.
+9. Confirm the changes on the listings page.
 
 ## Troubleshooting
 
@@ -166,7 +177,6 @@ The schema stores images as an object with `filename` and `url` properties. The 
 ## Current Limitations
 
 - There is no authentication or authorization.
-- There are no edit or delete routes yet.
 - There is no centralized error-handling middleware.
 - Database configuration is fixed to a local MongoDB instance.
 - There are no automated tests or test script configured.
@@ -175,7 +185,6 @@ The schema stores images as an object with `filename` and `url` properties. The 
 
 ## Possible Next Improvements
 
-- Add edit and delete functionality.
 - Add server-side validation and user-friendly error pages.
 - Add a shared header/footer layout and responsive styling.
 - Move the MongoDB URL and port into environment variables.
