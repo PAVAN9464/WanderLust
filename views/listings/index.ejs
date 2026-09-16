@@ -14,12 +14,6 @@
     <% for(let listing of allListings){ %>
             <li>
                 <a href="/listings/<%=listing._id %>"><%=listing.title%></a>
-                <form method="GET" action="/listings/<%=listing._id %>/edit" style="display:inline">
-                        <button type="submit">Edit</button>
-                </form>
-                <form method="POST" action="/listings/<%=listing._id %>?_method=DELETE" style="display:inline">
-                    <button type="submit">Delete</button>
-                </form>
             </li>
     <% } %>
 
