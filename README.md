@@ -1,6 +1,6 @@
 # Wanderlust
 
-Wanderlust is a server-rendered travel-listing application built with Node.js, Express, MongoDB, Mongoose, and EJS. Users can browse available listings, view listing details, and add new properties through a web form.
+Wanderlust is a server-rendered travel-listing application built with Node.js, Express, MongoDB, Mongoose, and EJS. Users can browse available listings, view listing details, add new properties, and manage existing listings through a responsive Bootstrap interface.
 
 ## Features
 
@@ -12,6 +12,9 @@ Wanderlust is a server-rendered travel-listing application built with Node.js, E
 - Store listing data in MongoDB using Mongoose.
 - Seed the database with sample travel listings.
 - Render pages on the server with EJS templates.
+- Display listing images from the nested `image.url` field.
+- Use shared layouts with a responsive navbar and footer.
+- Provide Airbnb-inspired styling for edit and update actions.
 
 ## Technology Stack
 
@@ -34,7 +37,12 @@ Major_Project/
 │   └── index.js            # Database reset and seed script
 ├── models/
 │   └── Listing.js          # Mongoose Listing schema and model
+├── public/
+│   └── css/
+│       └── style.css       # Shared application styles
 ├── views/
+│   ├── includes/           # Shared navbar and footer partials
+│   ├── layouts/             # Shared EJS layout
 │   └── listings/
 │       ├── index.ejs       # All listings page
 │       ├── edit.ejs        # Edit listing form
@@ -172,7 +180,7 @@ Check the terminal for validation or database errors. Confirm that the form incl
 
 ### Image field behavior
 
-The schema stores images as an object with `filename` and `url` properties. The current form exposes one `listing[image]` field, so image URL handling may need to be aligned with the nested schema if custom uploaded or submitted images are required. Listings without a custom image use the schema's default image URL.
+The schema stores images as an object with `filename` and `url` properties. The new and edit forms submit image URLs through `listing[image][url]`, and listing pages render them with `listing.image.url`. Listings without a custom image use the schema's default image URL.
 
 ## Current Limitations
 
@@ -181,7 +189,7 @@ The schema stores images as an object with `filename` and `url` properties. The 
 - Database configuration is fixed to a local MongoDB instance.
 - There are no automated tests or test script configured.
 - Form validation is basic and relies primarily on the Mongoose schema.
-- The UI currently uses simple HTML without a shared layout or stylesheet.
+- Images are loaded from external URLs rather than uploaded and stored locally.
 
 ## Possible Next Improvements
 
