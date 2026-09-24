@@ -5,7 +5,7 @@ const methodOverride=require("method-override");
 const Listing=require("./models/Listing")
 const path=require("path");
 const ejsMate=require("ejs-mate");
-
+const PORT=8080;
 
 const MONGO_URL="mongodb://127.0.0.1:27017/Wanderlust";
 main().catch(err => console.log(err));
@@ -92,6 +92,6 @@ app.get("/listings/:id",async (req,res)=>{
 //         await sample.save().catch((err)=>console.log(err));
 //         res.send("Saved Successfuly");
 // })
-app.listen(8080, (req,res)=>{
+app.listen(PORT, (req,res)=>{
     console.log("Listening to Port");
 });
