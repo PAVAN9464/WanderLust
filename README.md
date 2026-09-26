@@ -1,6 +1,6 @@
 # Wanderlust
 
-Wanderlust is a server-rendered travel-listing application built with Node.js, Express, MongoDB, Mongoose, and EJS. Users can browse available listings, view listing details, add new properties, and manage existing listings through a responsive Bootstrap interface.
+Wanderlust is a server-rendered travel-listing application built with Node.js, Express 5, MongoDB, Mongoose, and EJS. Users can browse available listings, view listing details, and create, update, or delete listings through a responsive Bootstrap interface. Listing submissions are validated with Joi, and application errors are rendered through a shared EJS error page.
 
 ## Features
 
@@ -11,6 +11,8 @@ Wanderlust is a server-rendered travel-listing application built with Node.js, E
 - Delete an existing listing from its details page.
 - Store listing data in MongoDB using Mongoose.
 - Seed the database with sample travel listings.
+- Validate listing create and update submissions with Joi.
+- Render not-found, validation, and other application errors with a shared error page.
 - Render pages on the server with EJS templates.
 - Display listing images from the nested `image.url` field.
 - Use shared layouts with a responsive navbar and footer.
@@ -19,10 +21,13 @@ Wanderlust is a server-rendered travel-listing application built with Node.js, E
 ## Technology Stack
 
 - **Node.js**: JavaScript runtime.
-- **Express**: Web server and routing framework.
+- **Express 5**: Web server and routing framework.
 - **MongoDB**: Database for storing listings.
 - **Mongoose**: MongoDB object modeling library.
 - **EJS**: Server-side HTML templating engine.
+- **EJS-Mate**: Shared EJS layouts and template support.
+- **Joi**: Server-side validation for listing form data.
+- **Bootstrap 5**: Responsive layout and interface components.
 - **method-override**: Enables PATCH and DELETE requests from HTML forms.
 - **Nodemon**: Development utility for automatically restarting the server.
 
@@ -32,17 +37,22 @@ Wanderlust is a server-rendered travel-listing application built with Node.js, E
 Major_Project/
 ├── app.js                  # Express application and route definitions
 ├── package.json            # Project metadata and dependencies
+├── schema.js               # Joi schema for listing request validation
 ├── init/
 │   ├── data.js             # Sample listing data
 │   └── index.js            # Database reset and seed script
 ├── models/
 │   └── Listing.js          # Mongoose Listing schema and model
+├── utils/
+│   ├── ExpressError.js     # Custom HTTP error class
+│   └── wrapAsync.js        # Async route error wrapper
 ├── public/
 │   └── css/
 │       └── style.css       # Shared application styles
 ├── views/
 │   ├── includes/           # Shared navbar and footer partials
 │   ├── layouts/             # Shared EJS layout
+│   ├── error.ejs            # Shared application error page
 │   └── listings/
 │       ├── index.ejs       # All listings page
 │       ├── edit.ejs        # Edit listing form
@@ -122,6 +132,8 @@ Because the script calls `deleteMany({})`, it deletes all existing documents in 
 
 Edit and Delete controls are available on each listing's details page. Because standard HTML forms support GET and POST, the forms submit a `_method` field and `method-override` converts those submissions into PATCH or DELETE requests.
 
+The create and update routes validate their submitted listing data before writing it to MongoDB. Unmatched routes produce a 404 error page.
+
 ## Listing Data Model
 
 Each listing follows the schema defined in `models/Listing.js`:
@@ -138,19 +150,15 @@ Each listing follows the schema defined in `models/Listing.js`:
 
 ## Creating a Listing
 
-The new-listing form submits URL-encoded fields using the `listing[...]` naming convention. Express parses this body with:
+The new-listing form submits URL-encoded fields using the `listing[...]` naming convention. Express parses the form body into a nested `req.body.listing` object with:
 
 ```js
 app.use(express.urlencoded({ extended: true }));
 ```
 
-The create route reads the nested object, saves it through Mongoose, and redirects after a successful save:
+The `listingSchema` in `schema.js` validates this object for both `POST /listings` and `PATCH /listings/:id`. Title, description, price, location, and country are required; price must be zero or greater. The image URL is optional, but a non-empty value must be a valid URI. Joi converts the submitted price string to a number before it reaches Mongoose.
 
-```js
-const newListing = new Listing(req.body.listing);
-await newListing.save();
-res.redirect("/listings");
-```
+Invalid submissions are passed to the centralized error middleware as HTTP 400 errors. The middleware renders `views/error.ejs` for validation errors and other application errors, using HTTP 500 when an error does not specify a status. The error page uses the shared site layout and links back to `/listings`.
 
 ## Typical Workflow
 
@@ -185,18 +193,14 @@ The schema stores images as an object with `filename` and `url` properties. The 
 ## Current Limitations
 
 - There is no authentication or authorization.
-- There is no centralized error-handling middleware.
 - Database configuration is fixed to a local MongoDB instance.
 - There are no automated tests or test script configured.
-- Form validation is basic and relies primarily on the Mongoose schema.
 - Images are loaded from external URLs rather than uploaded and stored locally.
 
 ## Possible Next Improvements
 
-- Add server-side validation and user-friendly error pages.
-- Add a shared header/footer layout and responsive styling.
 - Move the MongoDB URL and port into environment variables.
-- Add image upload or validated image URL support.
+- Add image uploads instead of relying only on external image URLs.
 - Add authentication for listing management.
 - Add automated route and model tests.
 
