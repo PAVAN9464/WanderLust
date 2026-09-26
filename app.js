@@ -6,6 +6,19 @@ const Listing=require("./models/Listing")
 const path=require("path");
 const ejsMate=require("ejs-mate");
 const PORT=8080;
+const wrapAsync=require("./utils/wrapAsync");
+const ExpressError=require("./utils/ExpressError");
+const {listingSchema}=require("./schema");
+
+const validateListing=(req,res,next)=>{
+    const {error,value}=listingSchema.validate(req.body);
+    if(error){
+        const message=error.details.map(detail=>detail.message).join(", ");
+        return next(new ExpressError(400,message));
+    }
+    req.body=value;
+    next();
+};
 
 const MONGO_URL="mongodb://127.0.0.1:27017/Wanderlust";
 main().catch(err => console.log(err));
@@ -41,15 +54,19 @@ app.get("/listings/new",(req,res)=>{
 });
 
 //Create new Route
-
-app.post("/listings",async (req,res)=>{
+app.post("/listings",validateListing,wrapAsync(async(req,res,next)=>{
     
-    const newListing=new Listing(req.body.listing);
-    await newListing.save();
-    res.redirect("/listings");
+    try{
+        const newListing=new Listing(req.body.listing);
+        await newListing.save();
+        res.redirect("/listings");
+    }
+    catch(err){
+        next();
+    }
     
 
-})
+}))
 
 //Edit Route
 app.get("/listings/:id/edit",async (req,res)=>{
@@ -59,7 +76,7 @@ app.get("/listings/:id/edit",async (req,res)=>{
 });
 
 //Update Route
-app.patch("/listings/:id",async (req,res)=>{
+app.patch("/listings/:id",validateListing,async (req,res)=>{
     const {id}=req.params;
     await Listing.findByIdAndUpdate(id,req.body.listing);
     res.redirect(`/listings/${id}`);
@@ -79,6 +96,16 @@ app.get("/listings/:id",async (req,res)=>{
     res.render("listings/show.ejs",{listing});
 
 })
+
+app.all("/{*splat}",(req,res,next)=>{
+    next(new ExpressError(404,"Page Not Found"));
+})
+app.use((err,req,res,next)=>{
+    const status=err.status || err.statusCode || 500;
+    const message=err.message || "Something went wrong";
+    res.status(status).render("error.ejs",{status,message});
+    
+});
 
 // app.get("/ListingTest",async (req,res)=>{
 //         let sample=new Listing({

@@ -4,15 +4,17 @@
     <div class="col-12 col-md-8 offset-md-2 col-lg-6 offset-lg-3">
         <h3 class="mb-4">Edit Listing</h3>
 
-        <form method="POST" action="/listings/<%= listing._id %>?_method=PATCH">
+        <form method="POST" action="/listings/<%= listing._id %>?_method=PATCH" novalidate class="needs-validation">
             <div class="mb-3">
                 <label for="title" class="form-label">Title</label>
                 <input id="title" name="listing[title]" class="form-control" placeholder="Enter listing name" type="text" value="<%= listing.title %>" required>
+                <div class="valid-feedback">Title is required</div>
             </div>
 
             <div class="mb-3">
                 <label for="description" class="form-label">Description</label>
-                <textarea id="description" name="listing[description]" class="form-control" placeholder="Enter description" rows="4"><%= listing.description || "" %></textarea>
+                <textarea id="description" name="listing[description]" class="form-control" placeholder="Enter description" rows="4" required><%= listing.description || "" %> </textarea>
+                <div class="invalid-feedback">Description is not Valid</div>
             </div>
 
             <div class="mb-3">
@@ -23,17 +25,20 @@
             <div class="row">
                 <div class="col-md-4 mb-3">
                     <label for="price" class="form-label">Price</label>
-                    <input id="price" name="listing[price]" class="form-control" placeholder="Enter price" type="number" min="0" value="<%= listing.price || "" %>">
+                    <input id="price" name="listing[price]" class="form-control" placeholder="Enter price" type="number" min="0" value="<%= listing.price || "" %>" required>
+                    <div class="invalid-feedback">Price is not Valid</div>
                 </div>
 
                 <div class="col-md-4 mb-3">
                     <label for="location" class="form-label">Location</label>
-                    <input id="location" name="listing[location]" class="form-control" placeholder="Enter location" type="text" value="<%= listing.location || "" %>">
+                    <input id="location" name="listing[location]" class="form-control" placeholder="Enter location" type="text" value="<%= listing.location || "" %>" required>
+                    <div class="invalid-feedback">Location is not Valid</div>
                 </div>
 
                 <div class="col-md-4 mb-3">
                     <label for="country" class="form-label">Country</label>
-                    <input id="country" name="listing[country]" class="form-control" placeholder="Enter country" type="text" value="<%= listing.country || "" %>">
+                    <input id="country" name="listing[country]" class="form-control" placeholder="Enter country" type="text" value="<%= listing.country || "" %>" required>
+                    <div class="invalid-feedback">Country not Valid</div>
                 </div>
             </div>
 
@@ -41,3 +46,5 @@
         </form>
     </div>
 </div>
+
+<script src="/js/script.js"></script>
