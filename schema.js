@@ -14,4 +14,11 @@ const listingSchema=Joi.object({
     }).required()
 });
 
-module.exports={listingSchema};
+const reviewSchema=Joi.object({
+    review:Joi.object({
+        rating:Joi.number().min(1).max(5).required(),
+        comment:Joi.string().trim().required()
+    }).required()
+});
+
+module.exports={listingSchema, reviewSchema};
