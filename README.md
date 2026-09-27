@@ -9,7 +9,9 @@ Wanderlust is a server-rendered travel-listing application built with Node.js, E
 - Add a new listing through an HTML form.
 - Edit an existing listing from its details page.
 - Delete an existing listing from its details page.
+- Add and delete 1-5-star reviews on a listing.
 - Store listing data in MongoDB using Mongoose.
+- Associate reviews with listings and remove their reviews when a listing is deleted.
 - Seed the database with sample travel listings.
 - Validate listing create and update submissions with Joi.
 - Render not-found, validation, and other application errors with a shared error page.
@@ -42,13 +44,19 @@ Major_Project/
 │   ├── data.js             # Sample listing data
 │   └── index.js            # Database reset and seed script
 ├── models/
-│   └── Listing.js          # Mongoose Listing schema and model
+│   ├── Listing.js          # Mongoose Listing schema and model
+│   └── review.js           # Mongoose Review schema and model
+├── routes/
+│   ├── listings.js         # Listing CRUD routes
+│   └── review.js           # Nested review create and delete routes
 ├── utils/
 │   ├── ExpressError.js     # Custom HTTP error class
 │   └── wrapAsync.js        # Async route error wrapper
 ├── public/
-│   └── css/
-│       └── style.css       # Shared application styles
+│   ├── css/
+│   │   └── style.css       # Shared application styles
+│   └── js/
+│       └── script.js       # Client-side form validation
 ├── views/
 │   ├── includes/           # Shared navbar and footer partials
 │   ├── layouts/             # Shared EJS layout
@@ -129,10 +137,14 @@ Because the script calls `deleteMany({})`, it deletes all existing documents in 
 | `PATCH` | `/listings/:id` | Updates one listing and redirects to its details page. |
 | `DELETE` | `/listings/:id` | Deletes one listing and redirects to `/listings`. |
 | `GET` | `/listings/:id` | Fetches and displays one listing by its MongoDB ID. |
+| `POST` | `/listings/:id/reviews` | Validates and adds a review to a listing, then redirects to its details page. |
+| `DELETE` | `/listings/:id/reviews/:reviewId` | Removes a review and redirects to its listing's details page. |
 
 Edit and Delete controls are available on each listing's details page. Because standard HTML forms support GET and POST, the forms submit a `_method` field and `method-override` converts those submissions into PATCH or DELETE requests.
 
 The create and update routes validate their submitted listing data before writing it to MongoDB. Unmatched routes produce a 404 error page.
+
+Review creation is validated separately: each submitted review must include a rating from 1 to 5 and a non-empty comment. Listing detail pages populate and display their reviews. Deleting a listing also deletes its associated review documents.
 
 ## Listing Data Model
 
@@ -147,6 +159,9 @@ Each listing follows the schema defined in `models/Listing.js`:
 | `price` | Number | No | Price displayed for the listing. |
 | `location` | String | No | City, region, or area of the property. |
 | `country` | String | No | Country where the property is located. |
+| `reviews` | ObjectId references | No | Reviews associated with the listing. |
+
+Each review is stored separately using the schema in `models/review.js` and referenced by its listing. Reviews contain a rating, comment, and creation timestamp. The form requires a rating from 1 to 5 and a non-empty comment.
 
 ## Creating a Listing
 
@@ -169,8 +184,9 @@ Invalid submissions are passed to the centralized error middleware as HTTP 400 e
 5. Select **Add new Listing**.
 6. Submit the form.
 7. Select a listing to open its details page.
-8. Use **Edit** to update the listing or **Delete** to remove it.
-9. Confirm the changes on the listings page.
+8. Add a rating and comment in the review form, or delete an existing review.
+9. Use **Edit** to update the listing or **Delete** to remove it.
+10. Confirm the changes on the listing details or listings page.
 
 ## Troubleshooting
 
@@ -192,7 +208,7 @@ The schema stores images as an object with `filename` and `url` properties. The 
 
 ## Current Limitations
 
-- There is no authentication or authorization.
+- There is no authentication or authorization; listing and review actions are available to all visitors.
 - Database configuration is fixed to a local MongoDB instance.
 - There are no automated tests or test script configured.
 - Images are loaded from external URLs rather than uploaded and stored locally.
@@ -206,4 +222,4 @@ The schema stores images as an object with `filename` and `url` properties. The 
 
 ## License
 
-This project does not currently specify a license.
+The `package.json` declares the ISC license. There is no separate license file in the project.
