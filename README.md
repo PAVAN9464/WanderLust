@@ -16,6 +16,8 @@ Wanderlust is a server-rendered travel-listing application built with Node.js, E
 - Validate listing create and update submissions with Joi.
 - Render not-found, validation, and other application errors with a shared error page.
 - Show one-time success and error flash alerts after listing and review actions.
+- Register users with a username, email, and password.
+- Authenticate users with Passport's local strategy and session-based login.
 - Render pages on the server with EJS templates.
 - Display listing images from the nested `image.url` field.
 - Use shared layouts with a responsive navbar and footer.
@@ -31,6 +33,7 @@ Wanderlust is a server-rendered travel-listing application built with Node.js, E
 - **EJS-Mate**: Shared EJS layouts and template support.
 - **Joi**: Server-side validation for listing form data.
 - **express-session** and **connect-flash**: Session-backed, one-time status messages.
+- **Passport**, **passport-local**, and **passport-local-mongoose**: Local username/password authentication and user credential support.
 - **Bootstrap 5**: Responsive layout and interface components.
 - **method-override**: Enables PATCH and DELETE requests from HTML forms.
 - **Nodemon**: Development utility for automatically restarting the server.
@@ -47,10 +50,12 @@ Major_Project/
 │   └── index.js            # Database reset and seed script
 ├── models/
 │   ├── Listing.js          # Mongoose Listing schema and model
-│   └── review.js           # Mongoose Review schema and model
+│   ├── review.js           # Mongoose Review schema and model
+│   └── user.js             # Mongoose user model with local authentication
 ├── routes/
 │   ├── listings.js         # Listing CRUD routes
-│   └── review.js           # Nested review create and delete routes
+│   ├── review.js           # Nested review create and delete routes
+│   └── user.js             # Registration and login routes
 ├── utils/
 │   ├── ExpressError.js     # Custom HTTP error class
 │   └── wrapAsync.js        # Async route error wrapper
@@ -61,13 +66,16 @@ Major_Project/
 │       └── script.js       # Client-side form validation
 ├── views/
 │   ├── includes/           # Shared navbar, footer, and flash-alert partials
-│   ├── layouts/             # Shared EJS layout
-│   ├── error.ejs            # Shared application error page
-│   └── listings/
-│       ├── index.ejs       # All listings page
-│       ├── edit.ejs        # Edit listing form
-│       ├── new.ejs         # New listing form
-│       └── show.ejs        # Individual listing page
+│   ├── layouts/            # Shared EJS layout
+│   ├── error.ejs           # Shared application error page
+│   ├── listings/
+│   │   ├── index.ejs       # All listings page
+│   │   ├── edit.ejs        # Edit listing form
+│   │   ├── new.ejs         # New listing form
+│   │   └── show.ejs        # Individual listing page
+│   └── users/
+│       ├── login.ejs        # Login form
+│       └── signUp.ejs       # Registration form
 └── README.md
 ```
 
@@ -132,6 +140,11 @@ Because the script calls `deleteMany({})`, it deletes all existing documents in 
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/` | Displays a basic root-directory message. |
+| `GET` | `/signUp` | Displays the registration form. |
+| `POST` | `/signUp` | Registers a user with username, email, and password; redirects with a success or error flash alert. |
+| `GET` | `/login` | Displays the login form. |
+| `POST` | `/login` | Authenticates with Passport's local strategy and starts a session; redirects with a success or failure alert. |
+| `GET` | `/demoUser` | Development helper that creates a fixed demo account. Remove or secure this route before deployment. |
 | `GET` | `/listings` | Fetches and displays all listings. |
 | `GET` | `/listings/new` | Displays the form for creating a listing. |
 | `POST` | `/listings` | Creates a listing from submitted form data, saves it, and redirects to `/listings`. |
@@ -145,6 +158,12 @@ Because the script calls `deleteMany({})`, it deletes all existing documents in 
 Edit and Delete controls are available on each listing's details page. Because standard HTML forms support GET and POST, the forms submit a `_method` field and `method-override` converts those submissions into PATCH or DELETE requests.
 
 The create and update routes validate their submitted listing data before writing it to MongoDB. Unmatched routes produce a 404 error page.
+
+### User Accounts
+
+Registration and login forms are available at `/signUp` and `/login`. The user model uses `passport-local-mongoose` to manage local username/password credentials and stores an email address. Passport serializes authenticated users into the Express session. Successful registration and login and failed login attempts use flash alerts.
+
+Authentication is not yet enforced on listing or review routes: visitors do not need to log in to create, update, delete, or review listings. There is also no logout route or authenticated-user navigation state yet. Treat the account flow as an initial implementation, not access control.
 
 Review creation is validated separately: each submitted review must include a rating from 1 to 5 and a non-empty comment. Listing detail pages populate and display their reviews. Deleting a listing also deletes its associated review documents.
 
@@ -186,9 +205,9 @@ Invalid submissions are passed to the centralized error middleware as HTTP 400 e
 1. Start MongoDB.
 2. Run `node init/index.js` to load sample data.
 3. Run `node app.js`.
-4. Visit `/listings` to browse the records.
-5. Select **Add new Listing**.
-6. Submit the form.
+4. Visit `/signUp` to create an account, or `/login` to sign in.
+5. Visit `/listings` to browse the records.
+6. Select **Add new Listing** and submit the form.
 7. Select a listing to open its details page.
 8. Add a rating and comment in the review form, or delete an existing review.
 9. Use **Edit** to update the listing or **Delete** to remove it.
@@ -218,17 +237,20 @@ The schema stores images as an object with `filename` and `url` properties. The 
 
 ## Current Limitations
 
-- There is no authentication or authorization; listing and review actions are available to all visitors.
+- Authentication is available, but listing and review actions are not restricted to logged-in users and there is no authorization or ownership model.
+- There is no logout route or UI for showing the current user's authentication state.
 - Database configuration is fixed to a local MongoDB instance.
 - There is no automated test suite. The `npm test` script is only a placeholder and exits with an error.
 - Images are loaded from external URLs rather than uploaded and stored locally.
 - Sessions use the default in-memory store, and the session secret is configured directly in `app.js`; both should be replaced with production-ready configuration before deployment.
+- The `/demoUser` route creates a user with fixed credentials and must be removed or secured before deployment.
 
 ## Possible Next Improvements
 
 - Move the MongoDB URL and port into environment variables.
 - Add image uploads instead of relying only on external image URLs.
 - Add authentication for listing management.
+- Protect listing and review actions with authentication and ownership checks, and add logout.
 - Add automated route and model tests.
 
 ## License

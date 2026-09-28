@@ -12,9 +12,13 @@ const {listingSchema, reviewSchema}=require("./schema");
 const Review=require("./models/review");
 const session=require("express-session");
 const flash=require("connect-flash");
+const passport=require("passport");
+const LocalStrategy=require("passport-local").Strategy;
+const User=require("./models/user.js");
 
-const listings=require("./routes/listings.js");
-const reviews=require("./routes/review.js");
+const listingRouter=require("./routes/listings.js");
+const reviewRouter=require("./routes/review.js");
+const userRouter=require("./routes/user.js");
 
 
 const MONGO_URL="mongodb://127.0.0.1:27017/Wanderlust";
@@ -53,6 +57,14 @@ const sessionOptions={
 app.use(session(sessionOptions));
 app.use(flash());
 
+
+app.use(passport.initialize());
+app.use(passport.session());
+passport.use(new LocalStrategy(User.authenticate()));
+
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
 app.use((req,res,next)=>{
     res.locals.success=req.flash("success");
     res.locals.error=req.flash("error");
@@ -60,9 +72,18 @@ app.use((req,res,next)=>{
     next();
 })
 
-app.use("/listings",listings);
-app.use("/listings/:id/reviews",reviews);
+app.use("/listings",listingRouter);
+app.use("/listings/:id/reviews",reviewRouter);
+app.use("/",userRouter);
 
+app.get("/demoUser", async (req,res)=>{
+    let fakeUser=new User({
+        email:"aba@gmail.com",
+        username:"ABA"
+    });
+    let registeredUser=await User.register(fakeUser,"aba123");
+    res.send(registeredUser);
+})
 
 app.use((req,res,next)=>{
     next(new ExpressError(404,"Page Not Found"));
