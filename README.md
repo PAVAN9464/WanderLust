@@ -15,6 +15,7 @@ Wanderlust is a server-rendered travel-listing application built with Node.js, E
 - Seed the database with sample travel listings.
 - Validate listing create and update submissions with Joi.
 - Render not-found, validation, and other application errors with a shared error page.
+- Show one-time success and error flash alerts after listing and review actions.
 - Render pages on the server with EJS templates.
 - Display listing images from the nested `image.url` field.
 - Use shared layouts with a responsive navbar and footer.
@@ -29,6 +30,7 @@ Wanderlust is a server-rendered travel-listing application built with Node.js, E
 - **EJS**: Server-side HTML templating engine.
 - **EJS-Mate**: Shared EJS layouts and template support.
 - **Joi**: Server-side validation for listing form data.
+- **express-session** and **connect-flash**: Session-backed, one-time status messages.
 - **Bootstrap 5**: Responsive layout and interface components.
 - **method-override**: Enables PATCH and DELETE requests from HTML forms.
 - **Nodemon**: Development utility for automatically restarting the server.
@@ -58,7 +60,7 @@ Major_Project/
 │   └── js/
 │       └── script.js       # Client-side form validation
 ├── views/
-│   ├── includes/           # Shared navbar and footer partials
+│   ├── includes/           # Shared navbar, footer, and flash-alert partials
 │   ├── layouts/             # Shared EJS layout
 │   ├── error.ejs            # Shared application error page
 │   └── listings/
@@ -133,12 +135,12 @@ Because the script calls `deleteMany({})`, it deletes all existing documents in 
 | `GET` | `/listings` | Fetches and displays all listings. |
 | `GET` | `/listings/new` | Displays the form for creating a listing. |
 | `POST` | `/listings` | Creates a listing from submitted form data, saves it, and redirects to `/listings`. |
-| `GET` | `/listings/:id/edit` | Displays a prefilled edit form for one listing. |
-| `PATCH` | `/listings/:id` | Updates one listing and redirects to its details page. |
-| `DELETE` | `/listings/:id` | Deletes one listing and redirects to `/listings`. |
-| `GET` | `/listings/:id` | Fetches and displays one listing by its MongoDB ID. |
-| `POST` | `/listings/:id/reviews` | Validates and adds a review to a listing, then redirects to its details page. |
-| `DELETE` | `/listings/:id/reviews/:reviewId` | Removes a review and redirects to its listing's details page. |
+| `GET` | `/listings/:id/edit` | Displays a prefilled edit form; redirects to `/listings` with an error alert if the listing does not exist. |
+| `PATCH` | `/listings/:id` | Updates one listing, flashes a success alert, and redirects to its details page. |
+| `DELETE` | `/listings/:id` | Deletes one listing, flashes a success alert, and redirects to `/listings`. |
+| `GET` | `/listings/:id` | Fetches and displays one listing by its MongoDB ID; redirects to `/listings` with an error alert if it does not exist. |
+| `POST` | `/listings/:id/reviews` | Validates and adds a review, flashes a success alert, and redirects to the listing details page. |
+| `DELETE` | `/listings/:id/reviews/:reviewId` | Removes a review, flashes a success alert, and redirects to its listing's details page. |
 
 Edit and Delete controls are available on each listing's details page. Because standard HTML forms support GET and POST, the forms submit a `_method` field and `method-override` converts those submissions into PATCH or DELETE requests.
 
@@ -146,19 +148,23 @@ The create and update routes validate their submitted listing data before writin
 
 Review creation is validated separately: each submitted review must include a rating from 1 to 5 and a non-empty comment. Listing detail pages populate and display their reviews. Deleting a listing also deletes its associated review documents.
 
+### Flash Alerts
+
+The application configures `express-session` before `connect-flash`, then exposes `success` and `error` messages as template locals. The shared `views/includes/flash.ejs` partial displays success messages as green Bootstrap alerts and errors as red alerts; each alert can be dismissed. Flash messages are stored in the session and consumed when the next request renders a page. Listing create, update, and delete actions and review create and delete actions set success messages before redirecting. Requests for a missing listing redirect to `/listings` with an error message. Validation and other thrown application errors render the error page directly instead of using a flash redirect.
+
 ## Listing Data Model
 
-Each listing follows the schema defined in `models/Listing.js`:
+Each listing follows the Mongoose schema defined in `models/Listing.js`:
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `title` | String | Yes | Name of the property or accommodation. |
-| `description` | String | No | Description of the listing. |
+| `description` | String | No | Description of the listing. Required by Joi for create and update forms. |
 | `image.filename` | String | No | Name associated with the image. |
 | `image.url` | String | No | Image URL. A default image URL is provided. |
-| `price` | Number | No | Price displayed for the listing. |
-| `location` | String | No | City, region, or area of the property. |
-| `country` | String | No | Country where the property is located. |
+| `price` | Number | No | Price displayed for the listing. Required by Joi and must be zero or greater. |
+| `location` | String | No | City, region, or area of the property. Required by Joi for create and update forms. |
+| `country` | String | No | Country where the property is located. Required by Joi for create and update forms. |
 | `reviews` | ObjectId references | No | Reviews associated with the listing. |
 
 Each review is stored separately using the schema in `models/review.js` and referenced by its listing. Reviews contain a rating, comment, and creation timestamp. The form requires a rating from 1 to 5 and a non-empty comment.
@@ -173,7 +179,7 @@ app.use(express.urlencoded({ extended: true }));
 
 The `listingSchema` in `schema.js` validates this object for both `POST /listings` and `PATCH /listings/:id`. Title, description, price, location, and country are required; price must be zero or greater. The image URL is optional, but a non-empty value must be a valid URI. Joi converts the submitted price string to a number before it reaches Mongoose.
 
-Invalid submissions are passed to the centralized error middleware as HTTP 400 errors. The middleware renders `views/error.ejs` for validation errors and other application errors, using HTTP 500 when an error does not specify a status. The error page uses the shared site layout and links back to `/listings`.
+Invalid submissions are passed to the centralized error middleware as HTTP 400 errors. The middleware renders `views/error.ejs` for validation errors and other application errors, using HTTP 500 when an error does not specify a status. The error page uses the shared site layout and links back to `/listings`. Missing listing IDs on the edit and detail routes are handled separately with a redirect and a one-time error flash alert.
 
 ## Typical Workflow
 
@@ -202,6 +208,10 @@ The server listens on port `8080`. Stop the process using that port or change th
 
 Check the terminal for validation or database errors. Confirm that the form includes a title, since `title` is required by the schema.
 
+### Flash alert does not appear
+
+Flash alerts appear on the page rendered after the action's redirect. Confirm that the session and flash middleware are enabled before the routes, and that the shared layout includes `views/includes/flash.ejs`. The current session store is Express's in-memory default and is intended for local development, not production.
+
 ### Image field behavior
 
 The schema stores images as an object with `filename` and `url` properties. The new and edit forms submit image URLs through `listing[image][url]`, and listing pages render them with `listing.image.url`. Listings without a custom image use the schema's default image URL.
@@ -210,8 +220,9 @@ The schema stores images as an object with `filename` and `url` properties. The 
 
 - There is no authentication or authorization; listing and review actions are available to all visitors.
 - Database configuration is fixed to a local MongoDB instance.
-- There are no automated tests or test script configured.
+- There is no automated test suite. The `npm test` script is only a placeholder and exits with an error.
 - Images are loaded from external URLs rather than uploaded and stored locally.
+- Sessions use the default in-memory store, and the session secret is configured directly in `app.js`; both should be replaced with production-ready configuration before deployment.
 
 ## Possible Next Improvements
 
