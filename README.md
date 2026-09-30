@@ -45,6 +45,10 @@ Wanderlust is a server-rendered travel-listing application built with Node.js, E
 ```text
 Major_Project/
 ├── app.js                  # Express application and route definitions
+├── controllers/
+│   ├── listingController.js # Listing request handlers
+│   ├── reviewController.js  # Review request handlers
+│   └── userController.js    # Registration and session request handlers
 ├── middelware.js           # Login, ownership, and listing-validation middleware
 ├── package.json            # Project metadata and dependencies
 ├── schema.js               # Joi schema for listing request validation
@@ -81,6 +85,8 @@ Major_Project/
 │       └── signUp.ejs       # Registration form
 └── README.md
 ```
+
+The application follows MVC: Mongoose models define persisted data, controllers handle request logic, EJS views render pages, and route modules connect URL patterns to middleware and controller actions.
 
 ## Prerequisites
 
@@ -150,9 +156,9 @@ Because the script calls `deleteMany({})`, it deletes all existing documents in 
 | `GET` | `/logout` | Ends the current Passport session and redirects to `/listings`. |
 | `GET` | `/listings` | Fetches and displays all listings. |
 | `GET` | `/listings/new` | Displays the new-listing form; requires login. |
-| `POST` | `/listings` | Validates and creates a listing, assigning its owner from the current user. The route currently lacks its own login guard. |
+| `POST` | `/listings` | Requires login, validates the request, and creates a listing assigned to the current user. |
 | `GET` | `/listings/:id/edit` | Displays a prefilled edit form; requires login and listing ownership. |
-| `PATCH` | `/listings/:id` | Intended to validate and update a listing; requires login and listing ownership. The handler currently uses an undefined `id`, so this route needs a code fix before updates will work. |
+| `PATCH` | `/listings/:id` | Requires login and listing ownership, validates the request, and updates the listing. |
 | `DELETE` | `/listings/:id` | Deletes a listing; requires login and listing ownership. |
 | `GET` | `/listings/:id` | Fetches and displays one listing by its MongoDB ID; redirects to `/listings` with an error alert if it does not exist. |
 | `POST` | `/listings/:id/reviews` | Validates and adds a review attributed to the logged-in user; requires login. |
@@ -166,7 +172,7 @@ Listing create and update requests are validated with Joi before database writes
 
 Registration and login forms are available at `/signUp` and `/login`. The user model uses `passport-local-mongoose` to manage local username/password credentials and stores an email address. Passport serializes authenticated users into the Express session. Successful registration and login and failed login attempts use flash alerts.
 
-The navbar shows login/registration links when signed out and a logout link when signed in. Authorization is applied per route: listing edit and delete require login and listing ownership; review creation requires login, and review deletion requires login and review authorship. The new-listing page requires login, but `POST /listings` currently lacks its own login guard. The `PATCH /listings/:id` handler references an undefined `id`, so listing updates currently fail.
+The navbar shows login/registration links when signed out and a logout link when signed in. Authorization is applied per route: listing creation requires login, listing edit and delete require login and listing ownership, review creation requires login, and review deletion requires login and review authorship.
 
 Review creation is validated separately: each submitted review must include a rating from 1 to 5 and a non-empty comment. Reviews store an `author` reference; listing detail pages populate it to display the author's username. Deleting a listing also deletes its associated review documents.
 
@@ -211,10 +217,10 @@ Invalid submissions are passed to the centralized error middleware as HTTP 400 e
 3. Run `node app.js`.
 4. Visit `/signUp` to create an account, or `/login` to sign in.
 5. Visit `/listings` to browse the records.
-6. Select **Add new Listing** while signed in and submit the form. Note that the create route itself currently lacks a login guard.
+6. Select **Add new Listing** while signed in and submit the form.
 7. Select a listing to open its details page.
 8. Add a rating and comment while signed in. Only the author can delete a review.
-9. The listing owner can use **Edit** or **Delete**. Listing editing currently requires the route-handler fix noted above.
+9. The listing owner can use **Edit** or **Delete**.
 10. Confirm the changes on the listing details or listings page.
 
 ## Troubleshooting
@@ -241,8 +247,6 @@ The schema stores images as an object with `filename` and `url` properties. The 
 
 ## Current Limitations
 
-- `POST /listings` does not run the login middleware even though its handler expects `req.user`; unauthenticated direct requests can fail.
-- `PATCH /listings/:id` references an undefined `id` in its handler and cannot currently complete an update.
 - Database configuration is fixed to a local MongoDB instance.
 - There is no automated test suite. The `npm test` script is only a placeholder and exits with an error.
 - Images are loaded from external URLs rather than uploaded and stored locally.
@@ -252,7 +256,6 @@ The schema stores images as an object with `filename` and `url` properties. The 
 
 - Move the MongoDB URL and port into environment variables.
 - Add image uploads instead of relying only on external image URLs.
-- Add login middleware to `POST /listings` and fix the `PATCH /listings/:id` handler.
 - Add automated route and model tests.
 
 ## License

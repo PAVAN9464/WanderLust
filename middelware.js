@@ -1,7 +1,7 @@
 const Listing=require("./models/Listing");
 const Review=require("./models/review");
 const ExpressError=require("./utils/ExpressError");
-const {listingSchema}=require("./schema");
+const {listingSchema,reviewSchema}=require("./schema");
 
 module.exports.isLoggedIn=(req,res,next)=>{
     if(!req.isAuthenticated()){
@@ -23,7 +23,10 @@ module.exports.saveRedirectUrl=(req,res,next)=>{
 module.exports.isOwner=async (req,res,next)=>{
     const {id}=req.params;
     const listing=await Listing.findById(id);
-    if(!listing.owner._id.equals(res.locals.currUser._id)){
+    if(!listing){
+        return next(new ExpressError(404,"Listing not found"));
+    }
+    if(!listing.owner || !listing.owner.equals(req.user._id)){
         req.flash("error","you do not have access ");
         return res.redirect(`/listings/${id}`);
     }
@@ -45,6 +48,16 @@ module.exports.isReviewAuthor=async (req,res,next)=>{
 
 module.exports.validateListing=(req,res,next)=>{
     const {error,value}=listingSchema.validate(req.body);
+    if(error){
+        const message=error.details.map(detail=>detail.message).join(", ");
+        return next(new ExpressError(400,message));
+    }
+    req.body=value;
+    next();
+};
+
+module.exports.validateReview=(req,res,next)=>{
+    const {error,value}=reviewSchema.validate(req.body);
     if(error){
         const message=error.details.map(detail=>detail.message).join(", ");
         return next(new ExpressError(400,message));
