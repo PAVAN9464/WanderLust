@@ -68,6 +68,7 @@ passport.deserializeUser(User.deserializeUser());
 app.use((req,res,next)=>{
     res.locals.success=req.flash("success");
     res.locals.error=req.flash("error");
+    res.locals.currUser=req.user;
 
     next();
 })
@@ -76,14 +77,14 @@ app.use("/listings",listingRouter);
 app.use("/listings/:id/reviews",reviewRouter);
 app.use("/",userRouter);
 
-app.get("/demoUser", async (req,res)=>{
-    let fakeUser=new User({
-        email:"aba@gmail.com",
-        username:"ABA"
-    });
-    let registeredUser=await User.register(fakeUser,"aba123");
-    res.send(registeredUser);
-})
+// app.get("/demoUser", async (req,res)=>{
+//     let fakeUser=new User({
+//         email:"aba@gmail.com",
+//         username:"ABA"
+//     });
+//     let registeredUser=await User.register(fakeUser,"aba123");
+//     res.send(registeredUser);
+// })
 
 app.use((req,res,next)=>{
     next(new ExpressError(404,"Page Not Found"));
