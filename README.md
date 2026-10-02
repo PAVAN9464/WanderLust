@@ -1,13 +1,16 @@
 # Wanderlust
 
-Wanderlust is a server-rendered travel-listing application built with Node.js, Express 5, MongoDB, Mongoose, and EJS. Visitors can browse travel listings and their details. Registered users can create listings, upload listing images to Cloudinary, and leave star-rated reviews. Listing owners can edit or delete their listings, while review authors can delete their own reviews. The app uses Passport sessions for authentication, Joi for request validation, and a shared EJS error page for application errors.
+Wanderlust is a server-rendered travel-listing application built with Node.js, Express 5, MongoDB, Mongoose, and EJS. Visitors can browse travel listings and their details. Registered users can create listings, upload listing images to Cloudinary, and leave star-rated reviews. Listing owners can edit or delete their listings, while review authors can delete their own reviews. Listing locations are forward-geocoded with Mapbox, stored as GeoJSON points, and displayed on an interactive map. The app uses Passport sessions for authentication, Joi for request validation, and a shared EJS error page for application errors.
 
 ## Features
 
 - Display all travel listings.
 - View the details of an individual listing.
 - Add a new listing through an HTML form, including an image upload stored in Cloudinary.
-- Edit an existing listing from its details page.
+- Edit an existing listing from its details page, optionally replacing its image with a Cloudinary upload.
+- Geocode the listing's location and country through the Mapbox Geocoding API when a listing is created or updated.
+- Store Mapbox's GeoJSON `Point` geometry with coordinates ordered as `[longitude, latitude]`.
+- Show a Mapbox GL map and marker at the stored listing coordinates.
 - Delete an existing listing from its details page.
 - Add a 1-5-star review using a clickable star picker and a comment.
 - Display review ratings as stars and show the review author's username.
@@ -39,6 +42,7 @@ Wanderlust is a server-rendered travel-listing application built with Node.js, E
 - **Joi**: Server-side validation for listing form data.
 - **Multer** and **multer-storage-cloudinary**: Receive uploaded listing images and store them in Cloudinary.
 - **Cloudinary**: Remote image storage and delivery.
+- **Mapbox SDK** and **Mapbox GL JS**: Forward-geocode listing addresses, persist coordinates, and display interactive listing maps.
 - **dotenv**: Load local development credentials from `.env`.
 - **express-session** and **connect-flash**: Session-backed, one-time status messages.
 - **Passport**, **passport-local**, and **passport-local-mongoose**: Local username/password authentication and user credential support.
@@ -78,6 +82,7 @@ Major_Project/
 │   ├── css/
 │   │   └── style.css       # Shared application styles
 │   └── js/
+│       ├── map.js          # Mapbox map and listing marker
 │       └── script.js       # Client-side form validation
 ├── views/
 │   ├── includes/           # Shared navbar, footer, and flash-alert partials
@@ -103,6 +108,7 @@ Install the following software before running the project:
 - Node.js and npm
 - MongoDB Community Server, running locally
 - A Cloudinary account with an API key and secret for listing image uploads
+- A Mapbox access token with access to the Geocoding API and Mapbox GL styles
 - A browser
 
 The application currently connects to this local MongoDB database:
@@ -129,9 +135,10 @@ No manual database or collection creation is required. MongoDB creates them when
    CLOUD_NAME=your_cloudinary_cloud_name
    CLOUD_API_KEY=your_cloudinary_api_key
    CLOUD_API_SECRET=your_cloudinary_api_secret
+   MAP_TOKEN=your_mapbox_access_token
    ```
 
-   The `.env` file is excluded by `.gitignore`. Never commit real credentials. In production, provide these values through the hosting provider's environment-variable settings.
+   `MAP_TOKEN` is used by the server-side Geocoding API and exposed to the browser for Mapbox GL. Use a public Mapbox token with appropriate URL restrictions for the browser. The `.env` file is excluded by `.gitignore`; never commit credentials. In production, provide the required values through the hosting provider's environment-variable settings.
 
 4. Make sure MongoDB is running locally.
 
@@ -153,7 +160,7 @@ npx nodemon app.js
 
 ## Seed the Database
 
-The seed script removes the existing listings and inserts the sample data from `init/data.js`.
+The seed script in `init/index.js` is intended to remove the existing listings and insert the sample data from `init/data.js`.
 
 Run it from the project root:
 
@@ -161,7 +168,7 @@ Run it from the project root:
 node init/index.js
 ```
 
-Because the script calls `deleteMany({})`, it deletes all existing documents in the `Listing` collection before inserting the sample records. Use it only when resetting the development database is intended.
+**Current limitation:** the script calls `deleteMany({})`, deleting all existing listings before inserting sample records. The sample records do not include `geometry`, but the Listing model requires a GeoJSON point, so insertion can fail after deletion. Do not run this script against data you need; add valid geometry to the seed records or update the seed process to geocode them first.
 
 ## Application Routes
 
@@ -175,9 +182,9 @@ Because the script calls `deleteMany({})`, it deletes all existing documents in 
 | `GET` | `/logout` | Ends the current Passport session and redirects to `/listings`. |
 | `GET` | `/listings` | Fetches and displays all listings. |
 | `GET` | `/listings/new` | Displays the new-listing form; requires login. |
-| `POST` | `/listings` | Requires login, uploads the selected image to Cloudinary, validates listing fields, and creates a listing assigned to the current user. |
+| `POST` | `/listings` | Requires login, uploads the selected image to Cloudinary, validates listing fields, geocodes location and country, and creates a listing with GeoJSON geometry assigned to the current user. |
 | `GET` | `/listings/:id/edit` | Displays a prefilled edit form; requires login and listing ownership. |
-| `PATCH` | `/listings/:id` | Requires login and listing ownership, validates the request, and updates the listing. |
+| `PATCH` | `/listings/:id` | Requires login and listing ownership, validates and geocodes the updated location, optionally replaces the image, and updates the listing's fields and GeoJSON geometry. |
 | `DELETE` | `/listings/:id` | Deletes a listing; requires login and listing ownership. |
 | `GET` | `/listings/:id` | Fetches and displays one listing by its MongoDB ID; redirects to `/listings` with an error alert if it does not exist. |
 | `POST` | `/listings/:id/reviews` | Validates and adds a review attributed to the logged-in user; requires login. |
@@ -185,7 +192,7 @@ Because the script calls `deleteMany({})`, it deletes all existing documents in 
 
 Edit and Delete controls are available on each listing's details page. Because standard HTML forms support GET and POST, the forms submit a `_method` field and `method-override` converts those submissions into PATCH or DELETE requests.
 
-Listing create and update requests are validated with Joi before database writes. Unmatched routes produce a 404 error page. The create form sends multipart data for its image upload; `method-override` enables edit and delete actions from HTML forms.
+Listing create and update requests are validated with Joi before database writes. The controller then uses Mapbox forward geocoding to resolve the submitted location and country. Both listing forms send multipart data for Cloudinary image uploads; leaving the edit form's image field blank preserves the current image. `method-override` enables edit and delete actions from HTML forms.
 
 ### User Accounts
 
@@ -212,22 +219,32 @@ Each listing follows the Mongoose schema defined in `models/Listing.js`:
 | `price` | Number | No | Price displayed for the listing. Required by Joi and must be zero or greater. |
 | `location` | String | No | City, region, or area of the property. Required by Joi for create and update forms. |
 | `country` | String | No | Country where the property is located. Required by Joi for create and update forms. |
+| `geometry.type` | String | Yes | GeoJSON geometry type; set to `Point` from the Mapbox geocoding result. |
+| `geometry.coordinates` | Number array | Yes | GeoJSON coordinates in `[longitude, latitude]` order from Mapbox. |
 | `reviews` | ObjectId references | No | Reviews associated with the listing. |
 | `owner` | User ObjectId reference | No | User who owns the listing; used for edit/delete authorization. |
 
 Each review is stored separately using the schema in `models/review.js` and referenced by its listing. Reviews contain a rating, comment, creation timestamp, and an `author` reference to the user who submitted it. The form requires a rating from 1 to 5 and a non-empty comment.
 
-## Creating a Listing
+## Listing Geocoding and Map
 
-The new-listing form submits URL-encoded fields using the `listing[...]` naming convention. Express parses the form body into a nested `req.body.listing` object with:
+On listing creation and update, the controller sends the submitted `location` and `country` to Mapbox forward geocoding as one query. It takes the first returned feature's GeoJSON geometry and saves it to `listing.geometry`. If `MAP_TOKEN` is missing or Mapbox returns no matching feature, the request fails instead of saving a listing without coordinates. The `geometry` field in `models/Listing.js` requires a `Point` and coordinates.
+
+Mapbox returns coordinates in `[longitude, latitude]` order. The detail page serializes the listing and Mapbox token for `public/js/map.js`, which creates a Mapbox GL map, centers it on `listing.geometry.coordinates`, and adds a marker and popup. A Mapbox token and a stored geometry are therefore required to render a listing map. The current seed records do not have geometry; see the seeding limitation above.
+
+## Creating and Updating a Listing
+
+Listing forms use `multipart/form-data` because the image is uploaded as a file. Multer parses the form fields into the nested `req.body.listing` object and sends the selected image to Cloudinary. The route then validates the listing fields with Joi before the controller geocodes the address and saves the listing.
+
+The Joi schema requires title, description, non-negative price, location, and country. It does not validate the coordinates; the controller obtains those from Mapbox. The edit form can optionally replace the image. Leaving the file field empty preserves the current image, while changes to location or country trigger another geocoding request.
+
+Express also has URL-encoded form parsing configured for account and review forms:
 
 ```js
 app.use(express.urlencoded({ extended: true }));
 ```
 
-The `listingSchema` in `schema.js` validates listing fields for both `POST /listings` and `PATCH /listings/:id`. Title, description, price, location, and country are required; price must be zero or greater. Joi converts the submitted price string to a number before it reaches Mongoose.
-
-The new-listing form uses `multipart/form-data` and sends its image in the `listing[image][url]` file field. Multer passes the file to Cloudinary storage, which accepts PNG, JPG, and JPEG files and stores them in the `Wanderlust_DEV` folder. The controller saves Cloudinary's returned URL and filename on the listing. The edit form instead accepts an image URL as text; it does not upload a replacement file. Seed listings also use their sample external image URLs.
+Multer passes an image in `listing[image][url]` to Cloudinary storage, which accepts PNG, JPG, and JPEG files and stores them in the `Wanderlust_DEV` folder. The controller saves Cloudinary's returned URL and filename. Seed listing images use external URLs.
 
 Invalid submissions are passed to the centralized error middleware as HTTP 400 errors. The middleware renders `views/error.ejs` for validation errors and other application errors, using HTTP 500 when an error does not specify a status. The error page uses the shared site layout and links back to `/listings`. Missing listing IDs on the edit and detail routes are handled separately with a redirect and a one-time error flash alert.
 
@@ -260,7 +277,11 @@ Check the terminal for validation or database errors. Confirm that the form incl
 
 ### Cloudinary image upload fails
 
-Confirm that `CLOUD_NAME`, `CLOUD_API_KEY`, and `CLOUD_API_SECRET` are set in the project-root `.env` file and that the Cloudinary account is active. The create form currently accepts PNG, JPG, and JPEG files. The edit form accepts an image URL rather than uploading a replacement file.
+Confirm that `CLOUD_NAME`, `CLOUD_API_KEY`, and `CLOUD_API_SECRET` are set in the project-root `.env` file and that the Cloudinary account is active. Both create and edit forms accept PNG, JPG, and JPEG files. An edit without a selected file keeps the existing image.
+
+### Map or geocoding fails
+
+Confirm `MAP_TOKEN` is set in `.env`, the token has access to Mapbox Geocoding and map styles, and the browser can reach the Mapbox API. Listing creation and updates require Mapbox to return a matching feature. The map detail view also requires `listing.geometry.coordinates`; current seed records do not include geometry and cannot display a map until they are geocoded or given valid GeoJSON points.
 
 ### Flash alert does not appear
 
@@ -271,6 +292,8 @@ Flash alerts appear on the page rendered after the action's redirect. Confirm th
 - Database configuration is fixed to a local MongoDB instance.
 - There is no automated test suite. The `npm test` script is only a placeholder and exits with an error.
 - New listing images require Cloudinary credentials and are stored by Cloudinary; seeded listings and image URLs entered in the edit form may point to external hosts.
+- Listing creation and updates require a working Mapbox Geocoding token and a matching geocoding result.
+- The seed script's sample records omit the required GeoJSON `geometry`, so seeding can fail after deleting existing listings.
 - `multer-storage-cloudinary@4` declares a peer dependency on Cloudinary `^1.21.0`, while this project declares Cloudinary `^2.11.0`. npm may report a peer-dependency warning; verify uploads with the installed versions and consider a storage adapter that declares Cloudinary 2.x support.
 - Sessions use the default in-memory store, and the session secret is configured directly in `app.js`; both should be replaced with production-ready configuration before deployment.
 - The MongoDB URL and application port are hard-coded in `app.js` and `init/index.js`. Only Cloudinary credentials currently come from environment variables.
@@ -278,7 +301,6 @@ Flash alerts appear on the page rendered after the action's redirect. Confirm th
 ## Possible Next Improvements
 
 - Move the MongoDB URL, port, and session secret into environment variables.
-- Support replacing listing images through the Cloudinary upload form on the edit page.
 - Add automated route and model tests.
 
 ## License

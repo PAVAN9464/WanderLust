@@ -169,3 +169,9 @@ footer {
 .card:hover .card-img-overlay{
     opacity: 0.2;
 }
+
+/*Map*/
+#map{
+    height: 400px;
+    width: 60vh;
+}
