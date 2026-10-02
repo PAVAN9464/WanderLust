@@ -1,3 +1,9 @@
+if(process.env.NODE_ENV != "production"){
+    require('dotenv').config()
+}
+
+
+
 const express=require("express");
 const app=express();
 const mongoose=require("mongoose");
@@ -33,7 +39,7 @@ app.engine("ejs",ejsMate);
 app.use(express.static(path.join(__dirname,"public")));
 
 
-app.get("/",(req,res)=>{
+app.route("/").get((req,res)=>{
     res.send("At root directory");
 });
 

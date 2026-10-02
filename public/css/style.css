@@ -94,6 +94,45 @@ footer {
     font-weight: 400;
 }
 
+.rating-stars {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    width: fit-content;
+}
+
+.rating-option {
+    cursor: pointer;
+    color: #adb5bd;
+    font-size: 2rem;
+    line-height: 1;
+    padding: 0 0.15rem;
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.rating-option input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+.rating-option:hover,
+.rating-option:hover ~ .rating-option,
+.rating-option:has(input:checked),
+.rating-option:has(input:checked) ~ .rating-option {
+    color: #f4b400;
+}
+
+.rating-option:hover {
+    transform: scale(1.12);
+}
+
+.rating-option:has(input:focus-visible) {
+    outline: 2px solid #222;
+    outline-offset: 2px;
+}
+
 .btn-airbnb {
     border: 1px solid #ff385c !important;
     border-radius: 0.5rem !important;

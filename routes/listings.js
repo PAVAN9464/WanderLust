@@ -3,27 +3,26 @@ const router=express.Router();
 const wrapAsync=require("../utils/wrapAsync");
 const {isLoggedIn,isOwner,validateListing} = require("../middelware");
 const listingController=require("../controllers/listingController");
+const multer  = require('multer');
+const {storage}=require("../cloudConfig.js");
+const upload = multer({ storage });
 
-
-//Index Route
-router.get("/",wrapAsync(listingController.index));
-
+//Index and create routes
+router.route("/")
+	.get(wrapAsync(listingController.index))
+	.post(isLoggedIn,upload.single("listing[image][url]"),validateListing,wrapAsync(listingController.createListing));
+    
+    
 //New Route
 router.get("/new",isLoggedIn,listingController.renderNewForm);
-
-//Create new Route
-router.post("/",isLoggedIn,validateListing,wrapAsync(listingController.createListing));
 
 //Edit Route
 router.get("/:id/edit",isLoggedIn,isOwner,wrapAsync(listingController.renderEditForm));
 
-//Update Route
-router.patch("/:id",isLoggedIn,isOwner,validateListing,wrapAsync(listingController.updateListing));
-
-//Destroy Route
-router.delete("/:id",isLoggedIn,isOwner,wrapAsync(listingController.deleteListing));
-
-//Show Route
-router.get("/:id",wrapAsync(listingController.showListing));
+//Show, update, and destroy routes
+router.route("/:id")
+	.get(wrapAsync(listingController.showListing))
+	.patch(isLoggedIn,isOwner,validateListing,wrapAsync(listingController.updateListing))
+	.delete(isLoggedIn,isOwner,wrapAsync(listingController.deleteListing));
 
 module.exports=router;

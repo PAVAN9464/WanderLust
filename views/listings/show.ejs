@@ -32,8 +32,18 @@
                     <h4>Leave a Review</h4>
                     <form action="/listings/<%= listing._id %>/reviews" method="POST" novalidate class="needs-validation">
                         <div class="mb-3 mt-3">
-                            <label for="rating" class="form-label">Rating</label>
-                            <input type="range" min="1" max="5" id="rating" name="review[rating]" class="form-range" value="5">
+                            <fieldset class="mb-0">
+                                <legend class="form-label">Rating</legend>
+                                <div class="rating-stars" role="radiogroup" aria-label="Rating">
+                                    <% for(let rating = 5; rating >= 1; rating--) { %>
+                                        <label class="rating-option" title="<%= rating %> out of 5">
+                                            <input type="radio" name="review[rating]" value="<%= rating %>" required>
+                                            <span aria-hidden="true">&#9733;</span>
+                                            <span class="visually-hidden"><%= rating %> out of 5 stars</span>
+                                        </label>
+                                    <% } %>
+                                </div>
+                            </fieldset>
                         </div>
                         <div class="mb-3 mt-3">
                             <label for="comment" class="form-label">Comments</label>

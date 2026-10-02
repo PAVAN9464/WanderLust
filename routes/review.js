@@ -6,9 +6,9 @@ const reviewController=require("../controllers/reviewController");
 
 
 //Create Review Route
-router.post("/",isLoggedIn,validateReview,wrapAsync(reviewController.createReview));
+router.route("/").post(isLoggedIn,validateReview,wrapAsync(reviewController.createReview));
 
 //Delete Review Route
-router.delete("/:reviewId",isLoggedIn,wrapAsync(isReviewAuthor),wrapAsync(reviewController.deleteReview));
+router.route("/:reviewId").delete(isLoggedIn,wrapAsync(isReviewAuthor),wrapAsync(reviewController.deleteReview));
 
 module.exports=router;
