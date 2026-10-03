@@ -160,15 +160,15 @@ npx nodemon app.js
 
 ## Seed the Database
 
-The seed script in `init/index.js` is intended to remove the existing listings and insert the sample data from `init/data.js`.
+The seed script in `init/index.js` geocodes each sample listing from `init/data.js`, then inserts the resulting GeoJSON geometry with the listing.
 
-Run it from the project root:
+Make sure MongoDB is running and `MAP_TOKEN` is set in the project-root `.env` file, then run from the project root:
 
 ```bash
 node init/index.js
 ```
 
-**Current limitation:** the script calls `deleteMany({})`, deleting all existing listings before inserting sample records. The sample records do not include `geometry`, but the Listing model requires a GeoJSON point, so insertion can fail after deletion. Do not run this script against data you need; add valid geometry to the seed records or update the seed process to geocode them first.
+The script resolves coordinates for all sample listings before deleting any existing listings. If the Mapbox token is missing or a location cannot be geocoded, initialization stops and the current listings are left untouched. On success, all existing listings are deleted and replaced by the sample data, so do not run it against listings you need to keep.
 
 ## Application Routes
 
@@ -228,9 +228,9 @@ Each review is stored separately using the schema in `models/review.js` and refe
 
 ## Listing Geocoding and Map
 
-On listing creation and update, the controller sends the submitted `location` and `country` to Mapbox forward geocoding as one query. It takes the first returned feature's GeoJSON geometry and saves it to `listing.geometry`. If `MAP_TOKEN` is missing or Mapbox returns no matching feature, the request fails instead of saving a listing without coordinates. The `geometry` field in `models/Listing.js` requires a `Point` and coordinates.
+On listing creation and update, the controller sends the submitted `location` and `country` to Mapbox forward geocoding as one query. It takes the first returned feature's GeoJSON geometry and saves it to `listing.geometry`. If `MAP_TOKEN` is missing or Mapbox returns no matching feature, the request fails instead of saving a listing without coordinates. The seed script also geocodes every sample listing before inserting it; see [Seed the Database](#seed-the-database). The `geometry` field in `models/Listing.js` requires a `Point` and coordinates.
 
-Mapbox returns coordinates in `[longitude, latitude]` order. The detail page serializes the listing and Mapbox token for `public/js/map.js`, which creates a Mapbox GL map, centers it on `listing.geometry.coordinates`, and adds a marker and popup. A Mapbox token and a stored geometry are therefore required to render a listing map. The current seed records do not have geometry; see the seeding limitation above.
+Mapbox returns coordinates in `[longitude, latitude]` order. The detail page serializes the listing and Mapbox token for `public/js/map.js`, which creates a Mapbox GL map, centers it on `listing.geometry.coordinates`, and adds a marker and popup. A Mapbox token and a stored geometry are therefore required to render a listing map. Older listings without geometry are geocoded and updated when their detail page is opened.
 
 ## Creating and Updating a Listing
 

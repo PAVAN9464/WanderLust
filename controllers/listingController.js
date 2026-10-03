@@ -20,6 +20,11 @@ const geocodeListing = async ({location,country}) => {
     return feature.geometry;
 };
 
+const hasValidGeometry = (geometry) => geometry?.type === "Point"
+    && Array.isArray(geometry.coordinates)
+    && geometry.coordinates.length === 2
+    && geometry.coordinates.every(Number.isFinite);
+
 module.exports.index=async (req,res)=>{
     const allListings=await Listing.find({});
     res.render("listings/index.ejs",{allListings});
@@ -81,5 +86,15 @@ module.exports.showListing=async (req,res)=>{
         req.flash("error","The requested Listing does not exist");
         return res.redirect("/listings");
     }
-    res.render("listings/show.ejs",{listing,mapToken});
+    let mapReady=hasValidGeometry(listing.geometry);
+    if(!mapReady && mapToken && listing.location && listing.country){
+        try{
+            listing.geometry=await geocodeListing(listing);
+            await Listing.updateOne({_id:listing._id},{$set:{geometry:listing.geometry}});
+            mapReady=true;
+        }catch(error){
+            console.error(`Could not geocode listing ${listing._id}:`,error.message);
+        }
+    }
+    res.render("listings/show.ejs",{listing,mapToken,mapReady});
 };

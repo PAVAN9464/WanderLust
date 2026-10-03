@@ -39,9 +39,9 @@ app.engine("ejs",ejsMate);
 app.use(express.static(path.join(__dirname,"public")));
 
 
-app.route("/").get((req,res)=>{
-    res.send("At root directory");
-});
+// app.route("/").get((req,res)=>{
+//     res.send("At root directory");
+// });
 
 
 const sessionOptions={
