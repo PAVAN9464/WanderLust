@@ -2,8 +2,6 @@ if(process.env.NODE_ENV != "production"){
     require('dotenv').config()
 }
 
-
-
 const express=require("express");
 const app=express();
 const mongoose=require("mongoose");
@@ -23,12 +21,11 @@ const reviewRouter=require("./routes/review.js");
 const userRouter=require("./routes/user.js");
 
 
-const MONGO_URL="mongodb://127.0.0.1:27017/Wanderlust";
+const dbUrl=process.env.ATLAS_URL;
 main().catch(err => console.log(err));
 
-
 async function main() {
-    await mongoose.connect(MONGO_URL);
+    await mongoose.connect(dbUrl);
     console.log("MongoDB connected!");
 }
 app.set("view engine","ejs");
@@ -45,7 +42,7 @@ app.use(express.static(path.join(__dirname,"public")));
 
 
 const sessionOptions={
-    secret:"DishitaMyCrush",
+    secret:process.env.SESSION_SECRET,
     resave:false,
     saveUninitialized:true,
     cookie:{
@@ -92,8 +89,9 @@ app.use((req,res,next)=>{
     next(new ExpressError(404,"Page Not Found"));
 });
 app.use((err,req,res,next)=>{
-    const status=err.status || err.statusCode || 500;
-    const message=err.message || "Something went wrong";
+    const isUploadTooLarge=err.code === "LIMIT_FILE_SIZE";
+    const status=isUploadTooLarge ? 413 : err.status || err.statusCode || 500;
+    const message=isUploadTooLarge ? "Image uploads must be 5 MB or smaller" : err.message || "Something went wrong";
     res.status(status).render("error.ejs",{status,message});
 });
 

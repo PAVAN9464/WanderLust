@@ -1,4 +1,5 @@
 const Listing=require("../models/Listing");
+const {cloudinary}=require("../cloudConfig");
 const mbxGeoCoding = require('@mapbox/mapbox-sdk/services/geocoding');
 const ExpressError=require("../utils/ExpressError");
 const mapToken=process.env.MAP_TOKEN;
@@ -72,6 +73,10 @@ module.exports.updateListing=async (req,res)=>{
 
 module.exports.deleteListing=async (req,res)=>{
     const {id}=req.params;
+    const listing=await Listing.findById(id);
+    if(listing?.image?.filename && listing.image.filename !== "listingimage"){
+        await cloudinary.uploader.destroy(listing.image.filename);
+    }
     await Listing.findByIdAndDelete(id);
     req.flash("success","Listing Deleted");
     res.redirect("/listings");
