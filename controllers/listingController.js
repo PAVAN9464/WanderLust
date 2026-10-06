@@ -27,8 +27,21 @@ const hasValidGeometry = (geometry) => geometry?.type === "Point"
     && geometry.coordinates.every(Number.isFinite);
 
 module.exports.index=async (req,res)=>{
-    const allListings=await Listing.find({});
-    res.render("listings/index.ejs",{allListings});
+    const location=typeof req.query.location === "string"
+        ? req.query.location.trim().slice(0,100)
+        : "";
+    const searchTerm=location.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const filter=location
+        ? {
+            $or: [
+                {title: {$regex: searchTerm, $options: "i"}},
+                {location: {$regex: searchTerm, $options: "i"}},
+                {country: {$regex: searchTerm, $options: "i"}},
+            ],
+        }
+        : {};
+    const allListings=await Listing.find(filter);
+    res.render("listings/index.ejs",{allListings,location});
 };
 
 module.exports.renderNewForm=(req,res)=>{

@@ -10,6 +10,22 @@
         <a class="nav-link" href="/listings">Explore</a>
         
       </div>
+      <form class="location-search d-flex my-2 my-lg-0" action="/listings" method="GET" role="search">
+        <label class="visually-hidden" for="listing-location-search">Search by location</label>
+        <input
+          class="form-control"
+          id="listing-location-search"
+          type="search"
+          name="location"
+          placeholder="Search destinations or listing names"
+          aria-label="Search listings by name, location, or country"
+          value="<%= typeof location !== 'undefined' ? location : '' %>"
+          maxlength="100"
+        >
+        <button class="location-search-button" type="submit" aria-label="Search">
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        </button>
+      </form>
       <div class="navbar-nav ms-auto">
         <a class="nav-link" href="/listings/new">Add new Listing</a>
         <% if(!currUser) { %>
