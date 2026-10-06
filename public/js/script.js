@@ -6,10 +6,16 @@
 
   if (locationSearch) {
     locationSearch.addEventListener('input', () => {
-      const hasActiveSearch = new URLSearchParams(window.location.search).has('location')
+      const params = new URLSearchParams(window.location.search)
+      const hasActiveSearch = params.has('location')
 
       if (!locationSearch.value && hasActiveSearch) {
-        window.location.assign(locationSearch.form.action)
+        params.delete('location')
+        const remainingQuery = params.toString()
+        const targetUrl = remainingQuery
+          ? `${locationSearch.form.action}?${remainingQuery}`
+          : locationSearch.form.action
+        window.location.assign(targetUrl)
       }
     })
   }

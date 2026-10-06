@@ -17,7 +17,21 @@
                 <div class="invalid-feedback">Description is not Valid</div>
             </div>
 
-           
+            <div class="mb-3">
+                <label for="category" class="form-label">Category</label>
+                <select id="category" name="listing[category]" class="form-select" required>
+                    <option value="" disabled selected>Select Category</option>
+                    <option value="Beach">Beach</option>
+                    <option value="Mountain">Mountain</option>
+                    <option value="City">City</option>
+                    <option value="Countryside">Countryside</option>
+                    <option value="Luxury">Luxury</option>
+                    <option value="Cabin">Cabin</option>
+                    <option value="Villa">Villa</option>
+                </select>
+                <div class="invalid-feedback">Please select a category</div>
+            </div>
+
             <div class="mb-3">
                 <label for="image-url" class="form-label">Upload Image</label>
                 <input id="image-url" name="listing[image][url]" class="form-control"  type="file">

@@ -10,7 +10,16 @@ const listingSchema=Joi.object({
         }),
         price:Joi.number().min(0).required(),
         location:Joi.string().trim().required(),
-        country:Joi.string().trim().required()
+        country:Joi.string().trim().required(),
+        category:Joi.string().valid(
+            "Beach",
+            "Mountain",
+            "City",
+            "Countryside",
+            "Luxury",
+            "Cabin",
+            "Villa"
+        ).required()
     }).required()
 });
 

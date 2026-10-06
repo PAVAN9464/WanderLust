@@ -1,29 +1,84 @@
 <% layout("/layouts/boilerplate") %>
 
-<body>
-  
-    <h3 class="mb-3"><%= location ? `Search results for "${location}"` : "All Listings" %></h3>
+<% 
+  const categoriesList = [
+    { name: "All", icon: "fa-solid fa-compass" },
+    { name: "Beach", icon: "fa-solid fa-umbrella-beach" },
+    { name: "Mountain", icon: "fa-solid fa-mountain" },
+    { name: "City", icon: "fa-solid fa-city" },
+    { name: "Countryside", icon: "fa-solid fa-tree" },
+    { name: "Luxury", icon: "fa-solid fa-gem" },
+    { name: "Cabin", icon: "fa-solid fa-campground" },
+    { name: "Villa", icon: "fa-solid fa-hotel" }
+  ];
+  const isAllActive = !category || category === "" || category === "All";
+%>
 
-    <% if (allListings.length === 0) { %>
-      <p class="text-muted">No listings found. Try another destination or listing name.</p>
+<div class="category-filters-container mb-4">
+  <div class="category-filters">
+    <% for (let cat of categoriesList) { 
+        const isActive = (cat.name === "All" && isAllActive) || (category === cat.name);
+        let catUrl;
+        if (cat.name === "All") {
+          catUrl = location ? `/listings?location=${encodeURIComponent(location)}` : "/listings";
+        } else {
+          catUrl = location 
+            ? `/listings?location=${encodeURIComponent(location)}&category=${encodeURIComponent(cat.name)}`
+            : `/listings?category=${encodeURIComponent(cat.name)}`;
+        }
+    %>
+      <a href="<%= catUrl %>" class="category-filter-item <%= isActive ? 'active' : '' %>" id="filter-<%= cat.name.toLowerCase() %>">
+        <div class="category-icon">
+          <i class="<%= cat.icon %>"></i>
+        </div>
+        <span class="category-label"><%= cat.name %></span>
+      </a>
     <% } %>
-    <div class="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1">
-      <% for (let listing of allListings) { %>
-        <a href="/listings/<%=listing._id %>"  class="listing-link">
-          <div class="card" style="width: 20rem;">
-            <img src="<%= listing.image.url %>" class="card-img-top" alt="<%= listing.title %>" style="height: 20rem;">
-            <div class="card-img-overlay"></div>
-            <div class="card-body">
-              <p class="card-text">
-                <b><%= listing.title %></b><br>
-                &#8377;<%= listing.price.toLocaleString("en-IN") %> per night
-              </p>
-            </div>
-          </div>
-        </a>
-      <% } %>
-    </div>
-</body>
+  </div>
+</div>
 
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <h3 class="mb-0">
+    <% if (location && category) { %>
+      Search results for "<%= location %>" in <%= category %>
+    <% } else if (location) { %>
+      Search results for "<%= location %>"
+    <% } else if (category) { %>
+      <%= category %> Listings
+    <% } else { %>
+      All Listings
+    <% } %>
+  </h3>
+  <% if (location || category) { %>
+    <a href="/listings" class="btn btn-sm btn-outline-secondary">Clear all filters</a>
+  <% } %>
+</div>
 
-    
+<% if (allListings.length === 0) { %>
+  <div class="my-4">
+    <p class="text-muted">No listings found. Try another destination or category.</p>
+    <% if (location || category) { %>
+      <a href="/listings" class="btn btn-airbnb btn-sm">View all listings</a>
+    <% } %>
+  </div>
+<% } %>
+
+<div class="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1">
+  <% for (let listing of allListings) { %>
+    <a href="/listings/<%= listing._id %>" class="listing-link">
+      <div class="card" style="width: 20rem;">
+        <img src="<%= listing.image.url %>" class="card-img-top" alt="<%= listing.title %>" style="height: 20rem;">
+        <div class="card-img-overlay"></div>
+        <div class="card-body">
+          <p class="card-text">
+            <% if (listing.category) { %>
+              <span class="badge rounded-pill bg-light text-dark border mb-1"><%= listing.category %></span><br>
+            <% } %>
+            <b><%= listing.title %></b><br>
+            &#8377;<%= listing.price.toLocaleString("en-IN") %> per night
+          </p>
+        </div>
+      </div>
+    </a>
+  <% } %>
+</div>

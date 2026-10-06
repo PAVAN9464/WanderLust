@@ -26,22 +26,42 @@ const hasValidGeometry = (geometry) => geometry?.type === "Point"
     && geometry.coordinates.length === 2
     && geometry.coordinates.every(Number.isFinite);
 
+const VALID_CATEGORIES = [
+    "Beach",
+    "Mountain",
+    "City",
+    "Countryside",
+    "Luxury",
+    "Cabin",
+    "Villa",
+];
+
 module.exports.index=async (req,res)=>{
     const location=typeof req.query.location === "string"
         ? req.query.location.trim().slice(0,100)
         : "";
-    const searchTerm=location.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const filter=location
-        ? {
-            $or: [
-                {title: {$regex: searchTerm, $options: "i"}},
-                {location: {$regex: searchTerm, $options: "i"}},
-                {country: {$regex: searchTerm, $options: "i"}},
-            ],
-        }
-        : {};
+    const rawCategory=typeof req.query.category === "string"
+        ? req.query.category.trim()
+        : "";
+    const category=VALID_CATEGORIES.includes(rawCategory) ? rawCategory : "";
+
+    const filter={};
+
+    if(location){
+        const searchTerm=location.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        filter.$or=[
+            {title: {$regex: searchTerm, $options: "i"}},
+            {location: {$regex: searchTerm, $options: "i"}},
+            {country: {$regex: searchTerm, $options: "i"}},
+        ];
+    }
+
+    if(category){
+        filter.category=category;
+    }
+
     const allListings=await Listing.find(filter);
-    res.render("listings/index.ejs",{allListings,location});
+    res.render("listings/index.ejs",{allListings,location,category});
 };
 
 module.exports.renderNewForm=(req,res)=>{
@@ -79,7 +99,7 @@ module.exports.updateListing=async (req,res)=>{
     if(req.file){
         listingData.image={url:req.file.path,filename:req.file.filename};
     }
-    await Listing.findByIdAndUpdate(id,listingData);
+    await Listing.findByIdAndUpdate(id,listingData,{ runValidators: true });
     req.flash("success","Listing Updated");
     res.redirect(`/listings/${id}`);
 };

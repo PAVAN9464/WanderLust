@@ -41,6 +41,20 @@ const listingSchema = new Schema({
         },
     },
 
+    category: {
+        type: String,
+        enum: [
+            "Beach",
+            "Mountain",
+            "City",
+            "Countryside",
+            "Luxury",
+            "Cabin",
+            "Villa"
+        ],
+        required: true
+    },
+
     reviews:[
         {
             type: Schema.Types.ObjectId,

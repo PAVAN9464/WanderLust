@@ -18,6 +18,21 @@
             </div>
 
             <div class="mb-3">
+                <label for="category" class="form-label">Category</label>
+                <select id="category" name="listing[category]" class="form-select" required>
+                    <option value="" disabled <%= !listing.category ? "selected" : "" %>>Select Category</option>
+                    <option value="Beach" <%= listing.category === "Beach" ? "selected" : "" %>>Beach</option>
+                    <option value="Mountain" <%= listing.category === "Mountain" ? "selected" : "" %>>Mountain</option>
+                    <option value="City" <%= listing.category === "City" ? "selected" : "" %>>City</option>
+                    <option value="Countryside" <%= listing.category === "Countryside" ? "selected" : "" %>>Countryside</option>
+                    <option value="Luxury" <%= listing.category === "Luxury" ? "selected" : "" %>>Luxury</option>
+                    <option value="Cabin" <%= listing.category === "Cabin" ? "selected" : "" %>>Cabin</option>
+                    <option value="Villa" <%= listing.category === "Villa" ? "selected" : "" %>>Villa</option>
+                </select>
+                <div class="invalid-feedback">Please select a category</div>
+            </div>
+
+            <div class="mb-3">
                 <label for="image-upload" class="form-label">Replace Image</label>
                 <% if (listing.image && listing.image.url) { %>
                     <div class="mb-2">
