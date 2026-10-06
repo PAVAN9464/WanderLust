@@ -11,6 +11,7 @@ const ejsMate=require("ejs-mate");
 const PORT=8080;
 const ExpressError=require("./utils/ExpressError");
 const session=require("express-session");
+const MongoStore = require('connect-mongo').default;
 const flash=require("connect-flash");
 const passport=require("passport");
 const LocalStrategy=require("passport-local").Strategy;
@@ -39,9 +40,20 @@ app.use(express.static(path.join(__dirname,"public")));
 // app.route("/").get((req,res)=>{
 //     res.send("At root directory");
 // });
+const store=MongoStore.create({
+    mongoUrl:dbUrl,
+   crypto:{
+    secret: process.env.SESSION_SECRET,
+   },
+    touchAfter:24*3600,
 
+});
+store.on("error",()=>{
+    console.log("Error is Mongo Session store",err);
 
+})
 const sessionOptions={
+    store,
     secret:process.env.SESSION_SECRET,
     resave:false,
     saveUninitialized:true,
@@ -72,6 +84,12 @@ app.use((req,res,next)=>{
     next();
 })
 
+
+app.get("/",(req,res)=>{
+    res.redirect("/listings");
+});
+
+
 app.use("/listings",listingRouter);
 app.use("/listings/:id/reviews",reviewRouter);
 app.use("/",userRouter);
@@ -84,6 +102,8 @@ app.use("/",userRouter);
 //     let registeredUser=await User.register(fakeUser,"aba123");
 //     res.send(registeredUser);
 // })
+
+
 
 app.use((req,res,next)=>{
     next(new ExpressError(404,"Page Not Found"));
